@@ -51,3 +51,4 @@ bitloop:
     jmp x--, bitloop
 
 set pins, 1       side 1 [baud - 1]  ; Stop bit
+```
