@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "DIY PCB Panelization in KiCAD for JLCPCB: Why and How I Do It"
-date: 2025-05-19
+date: 2025-04-19
 author: John McAninley
 categories: [pcb, kicad, jlcpcb]
 tags: [panelization, kicad, kikit, jlcpcb, fabrication-toolkit]
