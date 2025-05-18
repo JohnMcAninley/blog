@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Designing a Raspberry Pi HAT in KiCAD"
-date: 2025-05-18
+date: 2025-04-18
 categories: [hardware, raspberry-pi, kicad, electronics]
 ---
 
