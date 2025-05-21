@@ -1,5 +1,5 @@
 ---
-title: Implementing a 9-Bit UART with RP2040 PIO for RS485 Compatibility
+title: Implementing a 9-Bit UART in PIO on the RP2040
 date: 2025-05-18
 layout: post
 author: John McAninley
