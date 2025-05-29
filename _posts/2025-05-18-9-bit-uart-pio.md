@@ -13,16 +13,17 @@ This post walks through how I implemented a 9-bit UART transmitter and receiver 
 
 ---
 
-## UART Framing 101
+## UART Basics
+**UART** (Universal Asynchronous Receiver/Transmitter) is an overloaded term that refers to a common hardware peripheral as well as the serial protocol it implements. The asynchronous nature of the protocol means that there is no accompanying clock signal with the data, instead it is sent and received at a specific rate agreed upon by the transmitter and receiver. A UART is HIGH in the IDLE state and a typical UART frame looks like:
 
-**UART (Universal Asynchronous Receiver/Transmitter)** is a simple, widely-used serial protocol. A typical UART frame includes:
-
+![UART_Frame svg](https://github.com/user-attachments/assets/331cef55-f8f9-432a-ba48-182db0a039dc)
+AmenophisIII, CC0, via Wikimedia Commons
 - **Start Bit (1 bit):** LOW to signal start of transmission.
 - **Data Bits (5–9 bits):** Payload, usually 8 bits.
 - **Parity Bit (optional):** Basic error detection (even/odd).
 - **Stop Bits (1–2 bits):** HIGH to signal end of frame.
 
-In **9-bit UART**, a 9th data bit is added to distinguish address frames from data frames in protocols like MDB. This is especially useful for RS485 multi-drop systems where each slave listens for an address frame before accepting data.
+UART data is most commonly sent least significant bit (LSB) first, so a 9th bit comes immediately before the parity or stop bit.
 
 ---
 
@@ -58,8 +59,7 @@ RP2040’s **PIO subsystem** lets you define custom logic-level protocols using 
 - CPU offloading and deterministic execution.
 
 ---
-![UART_Frame svg](https://github.com/user-attachments/assets/331cef55-f8f9-432a-ba48-182db0a039dc)
-AmenophisIII, CC0, via Wikimedia Commons
+
 
 ## Transmitting 9-Bit UART Frames
 
