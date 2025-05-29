@@ -35,6 +35,7 @@ RP2040’s **PIO subsystem** lets you define custom logic-level protocols using 
 - CPU offloading and deterministic execution.
 
 ---
+![UART_Frame svg](https://github.com/user-attachments/assets/331cef55-f8f9-432a-ba48-182db0a039dc)
 
 ## Transmitting 9-Bit UART Frames
 
