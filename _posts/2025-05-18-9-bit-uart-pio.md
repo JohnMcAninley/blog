@@ -43,7 +43,7 @@ Receiving would require handling parity errors as well since some valid data wou
 Besides the complexities of such an approach, the existing system was configured to use odd parity so I was unable to commandeer the parity bit.
 
 ### Alternative MCU
-AVR Microcontrollers Peripheral Guide
+[AVR Microcontrollers Peripheral Guide](https://ww1.microchip.com/downloads/en/DeviceDoc/30010135E.pdf)
 
 ### Software UART
 A 9-bit UART could be emulated in software. However, the system baud rate of 250kbps is above what is generally considered attainable with standard “bit-banging” software serial implementation. The RP2040, however, has a subsystem that falls between software and hardware that can implement a 9-bit UART: PIO. 
