@@ -26,6 +26,29 @@ In **9-bit UART**, a 9th data bit is added to distinguish address frames from da
 
 ---
 
+## Alternative Solutions
+### 8-Bit
+One option was to update the firmware on all existing devices on the system to use 8-bit data frames with an STX byte appended to the beginning of each frame. However, this would require a far more involved installation process for the new accessory as each device would need to be updated. 
+
+This would also forfeit the benefits of the 9-bit protocol. Each device would need to use CPU time for ~6 times as much bus traffic including the additional message framing. This would have a negative performance impact on the single-core ATMega32U4 based boards, some of which are doing time critical tasks such as motor control. Additionally, while the 9th-bit address flag is completely unique in framing the beginning of a message, a STX byte will likely collide with some value appearing in the data of a message. Therefore, any matching value would need to be escaped.
+
+### UART IC
+I conducted a brief search for a standalone UART IC that supported 9-bit data frames but I failed to find anything. Even if I had found a suitable candidate, this implementation would have still required writing some additional firmware to interact with the standalone UART and would have marginally increased the BOM and routing complexity.
+
+### Parity Bit Stuffing
+In theory it is possible to use the parity bit as a 9th data bit as it occurs in the same location in the bitstream. For example, if you want to send an address and the address has odd parity, you would set the UART mode to even parity so the parity bit is set. 
+
+Receiving would require handling parity errors as well since some valid data would appear to the UART to have incorrect parity. 
+
+Besides the complexities of such an approach, the existing system was configured to use odd parity so I was unable to commandeer the parity bit.
+
+### Alternative MCU
+AVR Microcontrollers Peripheral Guide
+
+### Software UART
+A 9-bit UART could be emulated in software. However, the system baud rate of 250kbps is above what is generally considered attainable with standard “bit-banging” software serial implementation. The RP2040, however, has a subsystem that falls between software and hardware that can implement a 9-bit UART: PIO. 
+
+
 ## Why Use PIO for UART?
 
 RP2040’s **PIO subsystem** lets you define custom logic-level protocols using tiny state machines that run in parallel with the CPU. For non-standard UART configurations like 9-bit, PIO allows:
@@ -36,6 +59,7 @@ RP2040’s **PIO subsystem** lets you define custom logic-level protocols using 
 
 ---
 ![UART_Frame svg](https://github.com/user-attachments/assets/331cef55-f8f9-432a-ba48-182db0a039dc)
+AmenophisIII, CC0, via Wikimedia Commons
 
 ## Transmitting 9-Bit UART Frames
 
