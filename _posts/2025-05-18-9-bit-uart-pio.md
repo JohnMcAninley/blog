@@ -83,8 +83,6 @@ bitloop:                   ; This loop will run 10 times (9 Odd 1 UART)
 The host code pushes a 9-bit value (1 address/data bit + 8-bit payload):
 
 ```c
-Copy
-Edit
 uint16_t frame = (is_address << 8) | payload;
 pio_sm_put_blocking(pio, sm_tx, frame);
 ```
