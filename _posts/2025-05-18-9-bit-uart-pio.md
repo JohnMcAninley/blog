@@ -63,21 +63,21 @@ A 9-bit UART could be emulated in software. However, the system baud rate of 250
 ---
 
 
-## Transmitting 9-Bit UART Frames
+## Implementation
+
+### Transmitter
 
 ```Assembly
-.program uart_tx_9bit
-.side_set 1
+.program uart_tx
+.side_set 1 opt
 
-.pull_block
-set x, 10
-set pins, 0       side 0 [baud - 1]  ; Start bit
+; OUT pin 0 and side-set pin 0 are both mapped to UART TX pin.
 
-bitloop:
-    out pins, 1   side 0 [baud - 1]
-    jmp x--, bitloop
-
-set pins, 1       side 1 [baud - 1]  ; Stop bit
+    pull       side 1 [7]  ; Assert stop bit, or stall with line in idle state
+    set x, 9   side 0 [7]  ; Preload bit counter, assert start bit for 8 clocks
+bitloop:                   ; This loop will run 10 times (9 Odd 1 UART)
+    out pins, 1            ; Shift 1 bit from OSR to the first OUT pin
+    jmp x-- bitloop   [6]  ; Each loop iteration is 8 cycles.
 ```
 
 The host code pushes a 9-bit value (1 address/data bit + 8-bit payload):
