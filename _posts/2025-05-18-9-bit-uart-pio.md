@@ -122,49 +122,26 @@ To ensure proper UART timing, calculate bit cycles using the system clock:
 ```
 Use this in PIO instruction delay slots like \[CYCLES_PER_BIT - 1\].
 
+---
+
 ## Next Steps
 
-### 1. Offload Address/Data Filtering to PIO
+### 1. Offload Address/Data Filtering in PIO
 
-Currently, the host code separates address and data frames. This logic can be moved into the PIO program:
+Currently, the host code optionally filters out data frames. However, this filtering should occur in PIO to reduce CPU intervention. Toggling this setting must be communicated from the CPU to PIO somehow.
 
-- Discard frames that don't match our address
-- Trigger interrupts only for relevant frames
+In theory, the PIO program could be aware of the device address and optionally filter out address frames as well. However, this is not behavior seen in hardware UART’s and is likely too complex for a PIO program. 
 
-This reduces CPU load and increases system responsiveness.
+### 2. Add Parity Checking in PIO
 
----
+The parity bit can continue to be calculated by the CPU on the TX side. However, the parity of received frames should be calculated and checked in PIO on the RX side to avoid the CPU having to deal with invalid data. If users want to be notified of parity errors and still check invalid data, this change wouldn’t make sense. 
 
-### 2. Add Parity Bit Support in PIO
+### 3. Create MicroPython Bindings
 
-To support protocols requiring parity:
+MicroPython is another very popular way to program the RP2040. While the PIO program can remain the same, the host code must either be exposed via MicroPython bindings or reimplemented in pure MicroPython.
 
-- **TX side:** Compute parity in software or add it in PIO.
-- **RX side:** Validate parity inside the PIO state machine before pushing data.
-
-This improves robustness for noisy or long cable runs.
-
----
-
-### 3. Decouple Baud Rate from PIO Clock
-
-Avoid tying PIO execution speed to the system clock frequency. Instead, use the PIO state machine’s clock divider:
-
-```c
-float clkdiv = (float) SYSTEM_CLOCK / (BAUD * bits_per_frame);
-pio_sm_set_clkdiv(pio, sm, clkdiv);
-```
-
-This allows multiple PIO programs to run independently at different rates.
-
-### 4. Create MicroPython Bindings
-Make this work accessible in MicroPython:
-
-- Wrap initialization and state machine loading
-- Expose read() / write() for 9-bit UART frames
-- Add address filtering and parity options
-
-This enables prototyping and experimentation without writing C code.
+### 4. Oversample RX
+Standard UART’s typically oversample the RX data at a rate of 16. This allows them to account for slight deviations of the transmitter and receiver clocks. The PIO implementation could be modified to oversample as well. 
 
 ## Conclusion
 By leveraging the RP2040’s PIO subsystem, we can implement 9-bit UART protocols that would otherwise require dedicated UART hardware. This makes it possible to build modern accessories that remain compatible with legacy RS485 networks—a common requirement in industrial and vending applications.
@@ -172,5 +149,5 @@ By leveraging the RP2040’s PIO subsystem, we can implement 9-bit UART protocol
 As this project matures, it can become a flexible library for supporting a wide range of UART configurations, including MDB and other vendor-specific extensions.
 
 ## Resources
-- [RP2040 Datasheet – PIO] (https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf)
-- [MDB Protocol Overview (NAMA)] (https://www.nayax.com/wp-content/uploads/2018/03/MDB-Specs.pdf)
+- [RP2040 Datasheet – PIO](https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf)
+- [MDB Protocol Overview (NAMA)](https://www.nayax.com/wp-content/uploads/2018/03/MDB-Specs.pdf)
