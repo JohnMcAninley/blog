@@ -13,6 +13,10 @@ This post walks through how I implemented a 9-bit UART transmitter and receiver 
 
 ---
 
+## PIO Primer
+
+The PIO (Programmable Input/Output) peripheral is a somewhat unique feature of the Raspberry Pi RP2040 microcontroller. Each of the two PIO blocks contains a 32-word instruction memory as well as four state machines to execute small, user-defined programs written in a simple assembly-like language. PIO excels at implementing custom, timing critical I/O handling with minimal CPU intervention. Ideal uses include custom protocols, PWM generation, precisely timed LED control, precise timing control, and more. This is particularly useful when requirements exceed the capabilities of the standard onboard peripherals.
+
 ## UART Basics
 **UART** (Universal Asynchronous Receiver/Transmitter) is an overloaded term that refers to a common hardware peripheral as well as the serial protocol it implements. The asynchronous nature of the protocol means that there is no accompanying clock signal with the data, instead it is sent and received at a specific rate agreed upon by the transmitter and receiver. A UART is HIGH in the IDLE state and a typical UART frame looks like:
 
@@ -48,15 +52,6 @@ Besides the complexities of such an approach, the existing system was configured
 
 ### Software UART
 A 9-bit UART could be emulated in software. However, the system baud rate of 250kbps is above what is generally considered attainable with standard “bit-banging” software serial implementation. The RP2040, however, has a subsystem that falls between software and hardware that can implement a 9-bit UART: PIO. 
-
-
-## Why Use PIO for UART?
-
-RP2040’s **PIO subsystem** lets you define custom logic-level protocols using tiny state machines that run in parallel with the CPU. For non-standard UART configurations like 9-bit, PIO allows:
-
-- Precise bit timing at arbitrary baud rates.
-- Control over frame structure and logic levels.
-- CPU offloading and deterministic execution.
 
 ---
 
