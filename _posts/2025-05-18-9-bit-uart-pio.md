@@ -23,6 +23,7 @@ The PIO (Programmable Input/Output) peripheral is a somewhat unique feature of t
 UART (Universal Asynchronous Receiver/Transmitter) refers to a common hardware peripheral and often to the serial protocol it implements as well. The asynchronous nature of the protocol means that there is no accompanying clock signal with the data, instead it is sent and received at a specific rate (baud rate) agreed upon by the transmitter and receiver. There is also a small amount of framing applied to the data.
 
 ![UART_Frame svg](https://github.com/user-attachments/assets/331cef55-f8f9-432a-ba48-182db0a039dc)
+
 AmenophisIII, CC0, via Wikimedia Commons
 - **Start Bit (1 bit):** LOW to signal start of transmission. The line is HIGH when IDLE.
 - **Data Bits (5–9 bits):** Payload, commonly 8 bits.
