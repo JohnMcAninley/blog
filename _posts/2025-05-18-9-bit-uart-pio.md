@@ -151,3 +151,4 @@ As this project matures, it can become a flexible library for supporting a wide 
 ## Resources
 - [RP2040 Datasheet – PIO](https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf)
 - [MDB Protocol Overview (NAMA)](https://www.nayax.com/wp-content/uploads/2018/03/MDB-Specs.pdf)
+- Pico Examples: PIO UART [TX](https://github.com/raspberrypi/pico-examples/tree/master/pio/uart_tx) and [RX](https://github.com/raspberrypi/pico-examples/tree/master/pio/uart_rx)
