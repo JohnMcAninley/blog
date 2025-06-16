@@ -5,17 +5,19 @@ layout: post
 author: John McAninley
 ---
 
-While modern embedded systems often embrace Ethernet, CAN, or USB, many legacy networks still rely on **RS485** and **9-bit UART protocols** for robust, multi-drop serial communication. One such protocol is MDB (Multi-Drop Bus), but 9-bit UARTs also appear in custom industrial RS485 networks where the 9th bit is used to differentiate **address** and **data** frames.
+While modern embedded systems often embrace Ethernet or CAN for communication, many legacy and industrial systems still rely on RS485. A differential signal physical layer specification, RS485 allows multiple devices to be connected to the same bus. In order to reduce distribution to devices on the bus, systems using RS485 can utilize a serial protocol which includes a 9th bit to differentiate between address and data. Hardware support for this functionality allows each device to reduce its CPU load by filtering out irrelevant data until it reads its own address. One such protocol that uses this approach is MDB (Multi-Drop Bus), commonly used in vending machines. 
 
-My motivation for this project came from developing a new accessory for an **existing RS485 network that uses 9-bit data frames**. Ensuring **backward compatibility** was critical. However, unlike older microcontrollers like the ATmega32U4, the Raspberry Pi Pico’s RP2040 doesn’t natively support 9-bit UART. That’s where the RP2040’s **Programmable I/O (PIO)** subsystem becomes a game-changer.
+I took over a project to develop a new accessory for an existing system that also used such an approach. The system consists of distributed embedded devices communicating over an RS485 bus. The serial communication on the bus is 250kbps with 9-bit data, odd parity, and 1 stop bit (9odd1). 
 
-This post walks through how I implemented a 9-bit UART transmitter and receiver using RP2040 PIO to support legacy 9-bit RS485 communication.
+While the existing devices were all based on the ATMega32U4, the project had already elected to use an RP2040 for this new accessory. It was necessary to select a chip other than the ATMega32U4 as at least 1 more UART was needed for this project. The decision to choose a non-AVR microcontroller was due to issues sourcing the ATMega32U4, especially during the pandemic. However, this choice failed to account for at least one difference and limitation of the RP2040: the ARM Primecell PL011 UART’s only support data sizes between 5 and 8 bits. That’s where the RP2040’s Programmable Input/Output (PIO) peripheral comes in handy.
 
 ---
 
 ## PIO Primer
 
 The PIO (Programmable Input/Output) peripheral is a somewhat unique feature of the Raspberry Pi RP2040 microcontroller. Each of the two PIO blocks contains a 32-word instruction memory as well as four state machines to execute small, user-defined programs written in a simple assembly-like language. PIO excels at implementing custom, timing critical I/O handling with minimal CPU intervention. Ideal uses include custom protocols, PWM generation, precisely timed LED control, precise timing control, and more. This is particularly useful when requirements exceed the capabilities of the standard onboard peripherals.
+
+---
 
 ## UART Basics
 UART (Universal Asynchronous Receiver/Transmitter) refers to a common hardware peripheral and often to the serial protocol it implements as well. The asynchronous nature of the protocol means that there is no accompanying clock signal with the data, instead it is sent and received at a specific rate (baud rate) agreed upon by the transmitter and receiver. There is also a small amount of framing applied to the data.
@@ -32,23 +34,27 @@ UART data is most commonly sent least significant bit (LSB) first, so a 9th bit 
 ---
 
 ## Alternative Solutions
-### 8-Bit
-One option was to update the firmware on all existing devices on the system to use 8-bit data frames with an STX byte appended to the beginning of each frame. However, this would require a far more involved installation process for the new accessory as each device would need to be updated. 
+While I settled on implementing a 9-bit UART using PIO for this project, a number of other solutions were considered but decided against for various reasons. I am including them as one or more may be a better solution in different circumstances.
 
-This would also forfeit the benefits of the 9-bit protocol. Each device would need to use CPU time for ~6 times as much bus traffic including the additional message framing. This would have a negative performance impact on the single-core ATMega32U4 based boards, some of which are doing time critical tasks such as motor control. Additionally, while the 9th-bit address flag is completely unique in framing the beginning of a message, a STX byte will likely collide with some value appearing in the data of a message. Therefore, any matching value would need to be escaped.
+### 8-Bit
+One option was to update the firmware on all of the system’s existing devices to use 8-bit data frames and add additional message framing to replace the 9th bit address flag that begins each message. However, this would require a far more involved installation process for the new accessory as each device would need to be updated.
+
+This would also forfeit the benefits of the 9-bit protocol. Each device would need to use CPU time to process all bus traffic (including additional message framing), not just addresses and applicable data, a ~6x increase for this system. This would have a negative performance impact on the single-core ATMega32U4 based boards, some of which are doing time critical tasks such as motor control. Additionally, while the 9th-bit address flag is completely unique in framing the beginning of a message, a STX byte will likely collide with some value appearing in the data of a message. Therefore, any matching value would need to be escaped.
 
 ### UART IC
 I conducted a brief search for a standalone UART IC that supported 9-bit data frames but I failed to find anything. Even if I had found a suitable candidate, this implementation would have still required writing some additional firmware to interact with the standalone UART and would have marginally increased the BOM and routing complexity.
 
 ### Parity Bit Stuffing
-In theory it is possible to use the parity bit as a 9th data bit as it occurs in the same location in the bitstream. For example, if you want to send an address and the address has odd parity, you would set the UART mode to even parity so the parity bit is set. 
-
-Receiving would require handling parity errors as well since some valid data would appear to the UART to have incorrect parity. 
+In theory it is possible to use the parity bit as a 9th data bit as it occurs in the same location in the bitstream. For example, if you want to send an address and the address has odd parity, you would set the UART mode to even parity so the parity bit is set. Receiving would require handling parity errors in addition to data since some valid data would appear to the UART to have incorrect parity. 
 
 Besides the complexities of such an approach, the existing system was configured to use odd parity so I was unable to commandeer the parity bit.
 
 ### Alternative MCU
+When I joined the project, boards using the RP2040 had already been designed and prototyped, so I continued on with the RP2040. However, I ended up later needing to redesign these boards, so in retrospect I would have switched the project back to an AVR microcontroller that met the project requirements. While the PIO UART implementation was quick and painless, choosing a similar microcontroller with the same architecture would have required less code to be ported and would have resulted in a cleaner codebase.
+
 [AVR Microcontrollers Peripheral Guide](https://ww1.microchip.com/downloads/en/DeviceDoc/30010135E.pdf)
+
+The above chart provides an overview of the capabilities of all AVR microcontrollers. I believe using the AtMega32U2, which is extremely similar to the existing AtMega32u4, but has 2 USART’s, would’ve been the most appropriate choice.
 
 ### Software UART
 A 9-bit UART could be emulated in software. However, the system baud rate of 250kbps is above what is generally considered attainable with standard “bit-banging” software serial implementation. The RP2040, however, has a subsystem that falls between software and hardware that can implement a 9-bit UART: PIO. 
