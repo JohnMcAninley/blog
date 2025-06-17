@@ -167,15 +167,6 @@ uint16_t UART1::rx()
   return this->_data;
 }
 ```
-## Timing Considerations
-To ensure proper UART timing, calculate bit cycles using the system clock:
-```c
-#define SYSTEM_CLOCK 125000000
-#define BAUD 9600
-#define CYCLES_PER_BIT (SYSTEM_CLOCK / BAUD)
-```
-Use this in PIO instruction delay slots like \[CYCLES_PER_BIT - 1\].
-
 ---
 
 ## Next Steps
