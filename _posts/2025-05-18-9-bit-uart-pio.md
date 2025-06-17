@@ -62,10 +62,20 @@ A 9-bit UART could be emulated in software. However, the system baud rate of 250
 
 ---
 
+## Design
+
+I wanted my implementation to closely mirror the UART API in the Pico C SDK. I also wanted to include the functionality in that API which includes configuration such as baud rate and parity, and interrupts. In addition to the essential modification of 9-bit data word support, I also wanted to add the functionality to listen or ignore data frames that makes 9-bit UART’s more CPU friendly. Convenience functions to send 8-bit bytes as an address or data are also included to prevent the user from having to use 16-bit words and bit manipulation.
+
+---
 
 ## Implementation
 
 ### Transmitter
+The frame is built by the CPU, pushed to the PIO via the TX FIFO, then the PIO program simply outputs the frame with the correct timing. The PIO state machine waits until a new word is available in the FIFO. 
+
+The baud rate is set by setting the clock frequency of the state machine. Having this timing decoupled from the program lets multiple state machines run the same program at different baud rates. The only other configuration that affects the PIO program is the size of the frame, determined by the presence or absence of a parity bit and quantity of stop bits. The number of bits to output is stored in the “XY” scratchpad register. The CPU can modify this value by executing an instruction to load the correct value into the “XY” register. “Stopping and starting the state machine, potential data loss, etc.” This type of configuration is usually only done once at startup so it should not be too disruptive. 
+
+The convenience functions void send_address(uint8_t addr) and void send_data(uint8_t data) are provided, so that the user doesn’t have to worry about alignment and bitwise manipulation.
 
 ```Assembly
 .program uart_tx
@@ -82,12 +92,27 @@ bitloop:                   ; This loop will run 10 times (9 Odd 1 UART)
 
 The host code pushes a 9-bit value (1 address/data bit + 8-bit payload):
 
-```c
-uint16_t frame = (is_address << 8) | payload;
-pio_sm_put_blocking(pio, sm_tx, frame);
+```cpp
+void UART1::tx(uint16_t data)
+{
+  while (!pio_sm_is_tx_fifo_empty(this->pio, this->sm_tx));
+
+  if (this->parity != PARITY_NONE)
+  {
+    uint8_t parityBit = (this->paritySetting == PARITY_ODD) ? 1 : 0;
+    for (int i = 0; i < 9; i++) parityBit ^= ((data >> i) & 0x01);
+    data |= (parityBit << 9);
+  }
+
+  uint32_t word = data;
+
+  pio_sm_put(this->pio, this->sm_tx, word);
+
+  while (!pio_sm_is_tx_fifo_empty(this->pio, this->sm_tx));
+}
 ```
 
-## Receiving 9-Bit UART Frames
+## Receiver
 ```Assembly
 .program uart_rx
 
@@ -111,15 +136,35 @@ good_stop:              ; No delay before returning to start; a little slack is
     push                ; important in case the TX clock is slightly too fast.
 ```
 Host-side interpretation:
-```c
-uint16_t frame = pio_sm_get_blocking(pio, sm_rx);
-bool is_address = (frame >> 8) & 1;
-uint8_t data = frame & 0xFF;
+```cpp
+void UART1::receive()
+{
+  uint32_t w = pio_sm_get(this->pio, this->sm_rx);
+  uint16_t frame = w >> 16;
+  
+  uint8_t parity = (frame >> 15) & 1;
+  uint8_t isAddress = (frame >> 14) & 1;
+  uint8_t data = (frame >> 6) & 0xFF;
+  frame >>= 6;
+  frame &= 0x1FF;
 
-if (is_address) {
-    listening = (data == my_address);
-} else if (listening) {
-    process_data(data);
+  uint8_t parityBit = isAddress ^ (this->paritySetting == PARITY_ODD ? 1 : 0);
+  for (int i = 0; i < 9; i++) parityBit ^= ((data >> i) & 0x01);
+
+  this->_error = parityBit != parity;
+
+  if (!this->_error && (isAddress || _listenDataFrames))
+  {
+      _dataAvailable = true;
+      _data = frame;
+  }
+}
+
+uint16_t UART1::rx() 
+{
+  if (!this->_dataAvailable) this->receive();
+  this->_dataAvailable = false;
+  return this->_data;
 }
 ```
 ## Timing Considerations
